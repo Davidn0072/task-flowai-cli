@@ -9,21 +9,49 @@ interface User {
   createdAt: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+interface TaskItem {
+  id: number;
+  title: string;
+  description: string | null;
+  status: string | null;
+  priority: string | null;
+  dueDate: string | null;
+  createdAt: string;
+  userId: number;
+  user?: User;
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5033';
 
 function App() {
+  const [tab, setTab] = useState<'users' | 'tasks'>('users');
+
+  // Users state
   const [users, setUsers] = useState<User[]>([]);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+
+  // Tasks state
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDesc, setTaskDesc] = useState('');
+  const [taskStatus, setTaskStatus] = useState('Todo');
+  const [taskPriority, setTaskPriority] = useState('Medium');
+  const [taskDueDate, setTaskDueDate] = useState('');
+  const [taskUserId, setTaskUserId] = useState('1');
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (tab === 'users') loadUsers();
+    else loadTasks();
+  }, [tab]);
 
+  // ===== USERS =====
   const loadUsers = async () => {
     try {
       setLoading(true);
@@ -39,7 +67,7 @@ function App() {
     }
   };
 
-  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleUserSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!username || !email || !password) {
       setError('All fields required');
@@ -48,13 +76,13 @@ function App() {
 
     try {
       setLoading(true);
-      const url = editingId
-        ? `${API_URL}/api/users/${editingId}`
+      const url = editingUserId
+        ? `${API_URL}/api/users/${editingUserId}`
         : `${API_URL}/api/users`;
 
-      const method = editingId ? 'PUT' : 'POST';
-      const body = editingId
-        ? { id: editingId, username, email, password }
+      const method = editingUserId ? 'PUT' : 'POST';
+      const body = editingUserId
+        ? { id: editingUserId, username, email, password }
         : { username, email, password };
 
       const response = await fetch(url, {
@@ -68,7 +96,7 @@ function App() {
       setUsername('');
       setEmail('');
       setPassword('');
-      setEditingId(null);
+      setEditingUserId(null);
       setError('');
       loadUsers();
     } catch (err) {
@@ -78,14 +106,14 @@ function App() {
     }
   };
 
-  const handleEdit = (user: User) => {
+  const handleUserEdit = (user: User) => {
     setUsername(user.username);
     setEmail(user.email);
     setPassword(user.password);
-    setEditingId(user.id);
+    setEditingUserId(user.id);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleUserDelete = async (id: number) => {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/api/users/${id}`, {
@@ -101,98 +129,356 @@ function App() {
     }
   };
 
-  const handleCancel = () => {
+  // ===== TASKS =====
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/tasks`);
+      if (!response.ok) throw new Error('Failed to load tasks');
+      const data = await response.json();
+      setTasks(data);
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error loading tasks');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTaskSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!taskTitle || !taskUserId) {
+      setError('Title and User are required');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const url = editingTaskId
+        ? `${API_URL}/api/tasks/${editingTaskId}`
+        : `${API_URL}/api/tasks`;
+
+      const method = editingTaskId ? 'PUT' : 'POST';
+      const body = editingTaskId
+        ? {
+            id: editingTaskId,
+            title: taskTitle,
+            description: taskDesc || null,
+            status: taskStatus,
+            priority: taskPriority,
+            dueDate: taskDueDate || null,
+            userId: parseInt(taskUserId),
+          }
+        : {
+            title: taskTitle,
+            description: taskDesc || null,
+            status: taskStatus,
+            priority: taskPriority,
+            dueDate: taskDueDate || null,
+            userId: parseInt(taskUserId),
+          };
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) throw new Error('Failed to save task');
+
+      setTaskTitle('');
+      setTaskDesc('');
+      setTaskStatus('Todo');
+      setTaskPriority('Medium');
+      setTaskDueDate('');
+      setTaskUserId('1');
+      setEditingTaskId(null);
+      setError('');
+      loadTasks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error saving task');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTaskEdit = (task: TaskItem) => {
+    setTaskTitle(task.title);
+    setTaskDesc(task.description || '');
+    setTaskStatus(task.status || 'Todo');
+    setTaskPriority(task.priority || 'Medium');
+    setTaskDueDate(task.dueDate?.split('T')[0] || '');
+    setTaskUserId(task.userId.toString());
+    setEditingTaskId(task.id);
+  };
+
+  const handleTaskDelete = async (id: number) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/tasks/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete task');
+      setError('');
+      loadTasks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error deleting task');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetTaskForm = () => {
+    setTaskTitle('');
+    setTaskDesc('');
+    setTaskStatus('Todo');
+    setTaskPriority('Medium');
+    setTaskDueDate('');
+    setTaskUserId('1');
+    setEditingTaskId(null);
+  };
+
+  const resetUserForm = () => {
     setUsername('');
     setEmail('');
     setPassword('');
-    setEditingId(null);
+    setEditingUserId(null);
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Users CRUD</h1>
+    <div className="max-w-5xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">TaskFlow</h1>
+
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setTab('users')}
+          className={`px-4 py-2 rounded ${tab === 'users' ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
+        >
+          Users
+        </button>
+        <button
+          onClick={() => setTab('tasks')}
+          className={`px-4 py-2 rounded ${tab === 'tasks' ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
+        >
+          Tasks
+        </button>
+      </div>
 
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}
-
-      <form onSubmit={handleSubmit} className="bg-gray-100 p-4 rounded mb-6">
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full px-3 py-2 border rounded mb-2"
-            disabled={loading}
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border rounded mb-2"
-            disabled={loading}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border rounded mb-2"
-            disabled={loading}
-          />
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400"
-          >
-            {editingId ? 'Update' : 'Add'} User
-          </button>
-          {editingId && (
-            <button
-              type="button"
-              onClick={handleCancel}
-              disabled={loading}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
-
       {loading && <p className="text-gray-600 mb-4">Loading...</p>}
 
-      <div className="grid gap-4">
-        {users.length === 0 ? (
-          <p className="text-gray-600">No users yet</p>
-        ) : (
-          users.map((user) => (
-            <div key={user.id} className="bg-white border rounded p-4">
-              <p className="font-bold">{user.username}</p>
-              <p className="text-gray-600">{user.email}</p>
-              <p className="text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</p>
-              <div className="flex gap-2 mt-3">
+      {tab === 'users' && (
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Users</h2>
+          <form onSubmit={handleUserSubmit} className="bg-gray-100 p-4 rounded mb-6">
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-3 py-2 border rounded mb-2"
+                disabled={loading}
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 border rounded mb-2"
+                disabled={loading}
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border rounded mb-2"
+                disabled={loading}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400"
+              >
+                {editingUserId ? 'Update' : 'Add'} User
+              </button>
+              {editingUserId && (
                 <button
-                  onClick={() => handleEdit(user)}
+                  type="button"
+                  onClick={resetUserForm}
                   disabled={loading}
-                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                 >
-                  Edit
+                  Cancel
                 </button>
-                <button
-                  onClick={() => handleDelete(user.id)}
+              )}
+            </div>
+          </form>
+
+          <div className="grid gap-4">
+            {users.length === 0 ? (
+              <p className="text-gray-600">No users yet</p>
+            ) : (
+              users.map((user) => (
+                <div key={user.id} className="bg-white border rounded p-4">
+                  <p className="font-bold">{user.username}</p>
+                  <p className="text-gray-600">{user.email}</p>
+                  <p className="text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</p>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => handleUserEdit(user)}
+                      disabled={loading}
+                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleUserDelete(user.id)}
+                      disabled={loading}
+                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:bg-gray-400"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'tasks' && (
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Tasks</h2>
+          <form onSubmit={handleTaskSubmit} className="bg-gray-100 p-4 rounded mb-6">
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="Title"
+                value={taskTitle}
+                onChange={(e) => setTaskTitle(e.target.value)}
+                className="w-full px-3 py-2 border rounded mb-2"
+                disabled={loading}
+              />
+              <textarea
+                placeholder="Description"
+                value={taskDesc}
+                onChange={(e) => setTaskDesc(e.target.value)}
+                className="w-full px-3 py-2 border rounded mb-2"
+                disabled={loading}
+              />
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <select
+                  value={taskStatus}
+                  onChange={(e) => setTaskStatus(e.target.value)}
+                  className="px-3 py-2 border rounded"
                   disabled={loading}
-                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:bg-gray-400"
                 >
-                  Delete
-                </button>
+                  <option>Todo</option>
+                  <option>InProgress</option>
+                  <option>Done</option>
+                </select>
+                <select
+                  value={taskPriority}
+                  onChange={(e) => setTaskPriority(e.target.value)}
+                  className="px-3 py-2 border rounded"
+                  disabled={loading}
+                >
+                  <option>Low</option>
+                  <option>Medium</option>
+                  <option>High</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <input
+                  type="date"
+                  value={taskDueDate}
+                  onChange={(e) => setTaskDueDate(e.target.value)}
+                  className="px-3 py-2 border rounded"
+                  disabled={loading}
+                />
+                <select
+                  value={taskUserId}
+                  onChange={(e) => setTaskUserId(e.target.value)}
+                  className="px-3 py-2 border rounded"
+                  disabled={loading}
+                >
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.username}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-          ))
-        )}
-      </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400"
+              >
+                {editingTaskId ? 'Update' : 'Add'} Task
+              </button>
+              {editingTaskId && (
+                <button
+                  type="button"
+                  onClick={resetTaskForm}
+                  disabled={loading}
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="grid gap-4">
+            {tasks.length === 0 ? (
+              <p className="text-gray-600">No tasks yet</p>
+            ) : (
+              tasks.map((task) => (
+                <div key={task.id} className="bg-white border rounded p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="font-bold text-lg">{task.title}</p>
+                    <span className={`px-2 py-1 rounded text-sm text-white ${
+                      task.status === 'Done' ? 'bg-green-500' :
+                      task.status === 'InProgress' ? 'bg-yellow-500' :
+                      'bg-gray-500'
+                    }`}>
+                      {task.status}
+                    </span>
+                  </div>
+                  {task.description && <p className="text-gray-600 mb-2">{task.description}</p>}
+                  <div className="text-sm text-gray-500 mb-3">
+                    <p>Priority: {task.priority}</p>
+                    {task.dueDate && <p>Due: {new Date(task.dueDate).toLocaleDateString()}</p>}
+                    <p>User: {task.user?.username || 'Unknown'}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleTaskEdit(task)}
+                      disabled={loading}
+                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleTaskDelete(task.id)}
+                      disabled={loading}
+                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:bg-gray-400"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
