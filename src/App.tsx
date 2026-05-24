@@ -9,6 +9,15 @@ interface User {
   createdAt: string;
 }
 
+interface TaskSubItem {
+  id: number;
+  taskId: number;
+  title: string;
+  isDone: boolean;
+  orderIndex: number | null;
+  createdAt: string;
+}
+
 interface TaskItem {
   id: number;
   title: string;
@@ -19,6 +28,7 @@ interface TaskItem {
   createdAt: string;
   userId: number;
   user?: User;
+  subItems?: TaskSubItem[];
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5033';
@@ -43,6 +53,11 @@ function App() {
   const [taskUserId, setTaskUserId] = useState('1');
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
 
+  // SubItems state
+  const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
+  const [subItemTitle, setSubItemTitle] = useState('');
+  const [subItems, setSubItems] = useState<TaskSubItem[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,6 +65,10 @@ function App() {
     if (tab === 'users') loadUsers();
     else loadTasks();
   }, [tab]);
+
+  useEffect(() => {
+    if (expandedTaskId) loadSubItems(expandedTaskId);
+  }, [expandedTaskId]);
 
   // ===== USERS =====
   const loadUsers = async () => {
@@ -223,6 +242,82 @@ function App() {
       loadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error deleting task');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ===== SUB ITEMS =====
+  const loadSubItems = async (taskId: number) => {
+    try {
+      const response = await fetch(`${API_URL}/api/tasksubitems/task/${taskId}`);
+      if (!response.ok) throw new Error('Failed to load sub items');
+      const data = await response.json();
+      setSubItems(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error loading sub items');
+    }
+  };
+
+  const handleAddSubItem = async (taskId: number) => {
+    if (!subItemTitle.trim()) {
+      setError('Sub item title required');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/tasksubitems`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          title: subItemTitle,
+          isDone: false,
+          orderIndex: subItems.length,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to add sub item');
+      setSubItemTitle('');
+      setError('');
+      loadSubItems(taskId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error adding sub item');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleSubItem = async (subItem: TaskSubItem) => {
+    try {
+      const response = await fetch(`${API_URL}/api/tasksubitems/${subItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...subItem,
+          isDone: !subItem.isDone,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update sub item');
+      if (expandedTaskId) loadSubItems(expandedTaskId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error updating sub item');
+    }
+  };
+
+  const handleDeleteSubItem = async (subItemId: number) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/tasksubitems/${subItemId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete sub item');
+      if (expandedTaskId) loadSubItems(expandedTaskId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error deleting sub item');
     } finally {
       setLoading(false);
     }
@@ -457,6 +552,68 @@ function App() {
                     {task.dueDate && <p>Due: {new Date(task.dueDate).toLocaleDateString()}</p>}
                     <p>User: {task.user?.username || 'Unknown'}</p>
                   </div>
+
+                  {/* Sub Items Section */}
+                  <div className="mb-3 bg-gray-50 p-3 rounded">
+                    <button
+                      onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
+                      className="font-semibold text-sm text-blue-600 hover:underline mb-2"
+                    >
+                      {expandedTaskId === task.id ? '▼' : '▶'} Subtasks ({subItems.filter(s => s.taskId === task.id).length})
+                    </button>
+
+                    {expandedTaskId === task.id && (
+                      <div>
+                        {subItems.filter(s => s.taskId === task.id).length > 0 && (
+                          <div className="mb-2 space-y-1">
+                            {subItems
+                              .filter(s => s.taskId === task.id)
+                              .map((subItem) => (
+                                <div key={subItem.id} className="flex items-center gap-2 text-sm">
+                                  <input
+                                    type="checkbox"
+                                    checked={subItem.isDone}
+                                    onChange={() => handleToggleSubItem(subItem)}
+                                    className="w-4 h-4"
+                                  />
+                                  <span className={subItem.isDone ? 'line-through text-gray-400' : ''}>
+                                    {subItem.title}
+                                  </span>
+                                  <button
+                                    onClick={() => handleDeleteSubItem(subItem.id)}
+                                    disabled={loading}
+                                    className="ml-auto text-red-500 hover:text-red-700 text-xs"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="New subtask..."
+                            value={expandedTaskId === task.id ? subItemTitle : ''}
+                            onChange={(e) => setSubItemTitle(e.target.value)}
+                            className="flex-1 px-2 py-1 border rounded text-sm"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleAddSubItem(task.id);
+                            }}
+                            disabled={loading}
+                          />
+                          <button
+                            onClick={() => handleAddSubItem(task.id)}
+                            disabled={loading}
+                            className="bg-blue-500 text-white px-2 py-1 rounded text-sm hover:bg-blue-600 disabled:bg-gray-400"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleTaskEdit(task)}
