@@ -57,6 +57,7 @@ function App() {
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
   const [subItemTitle, setSubItemTitle] = useState('');
   const [subItems, setSubItems] = useState<TaskSubItem[]>([]);
+  const [generatingSubtasksFor, setGeneratingSubtasksFor] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -320,6 +321,25 @@ function App() {
       setError(err instanceof Error ? err.message : 'Error deleting sub item');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateSubtasks = async (taskId: number) => {
+    try {
+      setGeneratingSubtasksFor(taskId);
+      const response = await fetch(`${API_URL}/api/tasks/${taskId}/generate-subtasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) throw new Error('Failed to generate subtasks');
+      setError('');
+      setExpandedTaskId(taskId);
+      loadSubItems(taskId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error generating subtasks');
+    } finally {
+      setGeneratingSubtasksFor(null);
     }
   };
 
@@ -621,6 +641,13 @@ function App() {
                       className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400"
                     >
                       Edit
+                    </button>
+                    <button
+                      onClick={() => handleGenerateSubtasks(task.id)}
+                      disabled={loading || generatingSubtasksFor === task.id}
+                      className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 disabled:bg-gray-400 text-sm"
+                    >
+                      {generatingSubtasksFor === task.id ? 'Generating...' : '✨ AI Subtasks'}
                     </button>
                     <button
                       onClick={() => handleTaskDelete(task.id)}
