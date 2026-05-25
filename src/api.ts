@@ -4,11 +4,16 @@ const getToken = (): string | null => {
   return localStorage.getItem('token');
 };
 
-const getHeaders = (isFormData: boolean = false): HeadersInit => {
+const PUBLIC_AUTH_PATHS = ['/api/auth/login'];
+
+const isPublicAuthEndpoint = (endpoint: string): boolean =>
+  PUBLIC_AUTH_PATHS.some((path) => endpoint.startsWith(path));
+
+const getHeaders = (endpoint: string, isFormData: boolean = false): HeadersInit => {
   const headers: HeadersInit = isFormData ? {} : { 'Content-Type': 'application/json' };
   const token = getToken();
 
-  if (token) {
+  if (token && !isPublicAuthEndpoint(endpoint)) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
@@ -30,18 +35,17 @@ export const apiCall = async <T = any>(
   const fetchOptions: RequestInit = {
     ...options,
     headers: {
-      ...getHeaders(options.body instanceof FormData),
+      ...getHeaders(endpoint, options.body instanceof FormData),
       ...options.headers,
     },
   };
 
   const response = await fetch(url, fetchOptions);
 
-  // Handle 401 Unauthorized - token expired or invalid
-  if (response.status === 401) {
+  // Handle 401 Unauthorized - token expired or invalid (not on login)
+  if (response.status === 401 && !isPublicAuthEndpoint(endpoint)) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Redirect to login (handled by App.tsx checking isLoggedIn)
     window.dispatchEvent(new CustomEvent('logout'));
     throw new Error('Session expired. Please login again.');
   }

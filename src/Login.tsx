@@ -2,6 +2,15 @@ import { useState } from 'react';
 import { api } from './api';
 import './Login.css';
 
+const DEBUG_ACCOUNTS = [
+  { email: 'david@example.com', password: '123456' },
+  { email: 'noa@test.com', password: '12345672' },
+  { email: 'john@test.com', password: '123456' },
+  { email: 'jane@test.com', password: '123456' },
+  { email: 'andrey@test.com', password: '1234567' },
+  { email: 'mariana@test.com', password: '123456' },
+];
+
 interface LoginProps {
   onLoginSuccess: (username: string) => void;
   onSwitchToRegister: () => void;
@@ -29,7 +38,34 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps
         { email, password }
       );
 
-      // Save user info to localStorage
+      if (!data.token) {
+        throw new Error('Server did not return an authentication token');
+      }
+
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', data.token);
+
+      onLoginSuccess(data.user.username);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const debugQuickLogin = async (testAccount: { email: string; password: string }) => {
+    setError('');
+    try {
+      setLoading(true);
+      const data = await api.post<{ user: { id: number; username: string; email: string }; token: string }>(
+        '/api/auth/login',
+        { email: testAccount.email, password: testAccount.password }
+      );
+
+      if (!data.token) {
+        throw new Error('Server did not return an authentication token');
+      }
+
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('token', data.token);
 
@@ -96,6 +132,25 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps
             Register here
           </button>
         </p>
+
+        {import.meta.env.DEV && (
+          <div className="debug-section">
+            <p className="debug-label">🔧 DEBUG - Quick Login</p>
+            <div className="debug-buttons">
+              {DEBUG_ACCOUNTS.map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  onClick={() => debugQuickLogin(account)}
+                  disabled={loading}
+                  className="debug-button"
+                >
+                  {account.email.split('@')[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

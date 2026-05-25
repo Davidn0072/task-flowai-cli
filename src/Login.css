@@ -130,3 +130,51 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+.debug-section {
+  background: #fffef0;
+  border: 2px dashed #ffc107;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 24px;
+}
+
+.debug-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #8b5a00;
+  margin: 0 0 12px 0;
+  letter-spacing: 0.5px;
+}
+
+.debug-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.debug-button {
+  padding: 10px 12px;
+  background: #ffd54f;
+  border: none;
+  border-radius: 6px;
+  color: #8b5a00;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.debug-button:hover:not(:disabled) {
+  background: #ffca28;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+.debug-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -69,7 +69,8 @@ function App() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const storedToken = localStorage.getItem('token');
+    if (storedUser && storedToken) {
       try {
         const user = JSON.parse(storedUser);
         setCurrentUser(user.username);
@@ -78,9 +79,11 @@ function App() {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
       }
+    } else if (storedUser || storedToken) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
     }
 
-    // Listen for logout events from api.ts (token expired)
     const handleLogoutEvent = () => {
       handleLogout();
     };
@@ -89,9 +92,10 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!isLoggedIn) return;
     if (tab === 'users') loadUsers();
     else loadTasks();
-  }, [tab]);
+  }, [tab, isLoggedIn]);
 
   useEffect(() => {
     if (expandedTaskId) loadSubItems(expandedTaskId);
