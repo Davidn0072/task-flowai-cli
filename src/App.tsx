@@ -283,7 +283,8 @@ function App() {
       if (!response.ok) throw new Error('Failed to add sub item');
       setSubItemTitle('');
       setError('');
-      loadSubItems(taskId);
+      await loadSubItems(taskId);
+      await loadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error adding sub item');
     } finally {
@@ -303,7 +304,10 @@ function App() {
       });
 
       if (!response.ok) throw new Error('Failed to update sub item');
-      if (expandedTaskId) loadSubItems(expandedTaskId);
+      if (expandedTaskId) {
+        await loadSubItems(expandedTaskId);
+        await loadTasks();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error updating sub item');
     }
@@ -317,7 +321,10 @@ function App() {
       });
 
       if (!response.ok) throw new Error('Failed to delete sub item');
-      if (expandedTaskId) loadSubItems(expandedTaskId);
+      if (expandedTaskId) {
+        await loadSubItems(expandedTaskId);
+        await loadTasks();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error deleting sub item');
     } finally {
