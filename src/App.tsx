@@ -29,6 +29,7 @@ interface TaskItem {
   userId: number;
   user?: User;
   subItems?: TaskSubItem[];
+  subItemsCount: number;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5033';
@@ -579,7 +580,7 @@ function App() {
                       onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
                       className="font-semibold text-sm text-blue-600 hover:underline mb-2"
                     >
-                      {expandedTaskId === task.id ? '▼' : '▶'} Subtasks ({subItems.filter(s => s.taskId === task.id).length})
+                      {expandedTaskId === task.id ? '▼' : '▶'} Subtasks ({task.subItemsCount})
                     </button>
 
                     {expandedTaskId === task.id && (
