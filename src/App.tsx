@@ -336,7 +336,8 @@ function App() {
       if (!response.ok) throw new Error('Failed to generate subtasks');
       setError('');
       setExpandedTaskId(taskId);
-      loadSubItems(taskId);
+      await loadSubItems(taskId);
+      await loadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error generating subtasks');
     } finally {
