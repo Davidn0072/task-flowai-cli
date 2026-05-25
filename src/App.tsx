@@ -4,6 +4,7 @@ import Login from './Login';
 import Register from './Register';
 import Sidebar from './Sidebar';
 import UserFormModal from './UserFormModal';
+import TaskFormModal from './TaskFormModal';
 import { api } from './api';
 
 interface User {
@@ -60,6 +61,7 @@ function App() {
   const [taskDueDate, setTaskDueDate] = useState('');
   const [taskUserId, setTaskUserId] = useState('1');
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
   // SubItems state
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
@@ -97,7 +99,10 @@ function App() {
   useEffect(() => {
     if (!isLoggedIn) return;
     if (tab === 'users') loadUsers();
-    else loadTasks();
+    else {
+      loadTasks();
+      loadUsers();
+    }
   }, [tab, isLoggedIn]);
 
   useEffect(() => {
@@ -219,6 +224,7 @@ function App() {
       setTaskUserId('1');
       setEditingTaskId(null);
       setError('');
+      setIsTaskModalOpen(false);
       loadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error saving task');
@@ -235,6 +241,8 @@ function App() {
     setTaskDueDate(task.dueDate?.split('T')[0] || '');
     setTaskUserId(task.userId.toString());
     setEditingTaskId(task.id);
+    setIsTaskModalOpen(true);
+    setError('');
   };
 
   const handleTaskDelete = async (id: number) => {
@@ -340,8 +348,22 @@ function App() {
     setTaskStatus('Todo');
     setTaskPriority('Medium');
     setTaskDueDate('');
-    setTaskUserId('1');
+    setTaskUserId(users.length > 0 ? users[0].id.toString() : '1');
     setEditingTaskId(null);
+    setIsTaskModalOpen(false);
+    setError('');
+  };
+
+  const openTaskModal = () => {
+    setTaskTitle('');
+    setTaskDesc('');
+    setTaskStatus('Todo');
+    setTaskPriority('Medium');
+    setTaskDueDate('');
+    setTaskUserId(users.length > 0 ? users[0].id.toString() : '1');
+    setEditingTaskId(null);
+    setError('');
+    setIsTaskModalOpen(true);
   };
 
   const resetUserForm = () => {
@@ -475,88 +497,38 @@ function App() {
 
       {tab === 'tasks' && (
         <div>
-          <h2 className="text-2xl font-bold mb-4">Tasks</h2>
-          <form onSubmit={handleTaskSubmit} className="bg-gray-100 p-4 rounded mb-6">
-            <div className="mb-4">
-              <input
-                type="text"
-                placeholder="Title"
-                value={taskTitle}
-                onChange={(e) => setTaskTitle(e.target.value)}
-                className="w-full px-3 py-2 border rounded mb-2"
-                disabled={loading}
-              />
-              <textarea
-                placeholder="Description"
-                value={taskDesc}
-                onChange={(e) => setTaskDesc(e.target.value)}
-                className="w-full px-3 py-2 border rounded mb-2"
-                disabled={loading}
-              />
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <select
-                  value={taskStatus}
-                  onChange={(e) => setTaskStatus(e.target.value)}
-                  className="px-3 py-2 border rounded"
-                  disabled={loading}
-                >
-                  <option>Todo</option>
-                  <option>InProgress</option>
-                  <option>Done</option>
-                </select>
-                <select
-                  value={taskPriority}
-                  onChange={(e) => setTaskPriority(e.target.value)}
-                  className="px-3 py-2 border rounded"
-                  disabled={loading}
-                >
-                  <option>Low</option>
-                  <option>Medium</option>
-                  <option>High</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                <input
-                  type="date"
-                  value={taskDueDate}
-                  onChange={(e) => setTaskDueDate(e.target.value)}
-                  className="px-3 py-2 border rounded"
-                  disabled={loading}
-                />
-                <select
-                  value={taskUserId}
-                  onChange={(e) => setTaskUserId(e.target.value)}
-                  className="px-3 py-2 border rounded"
-                  disabled={loading}
-                >
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.username}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400"
-              >
-                {editingTaskId ? 'Update' : 'Add'} Task
-              </button>
-              {editingTaskId && (
-                <button
-                  type="button"
-                  onClick={resetTaskForm}
-                  disabled={loading}
-                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </form>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Tasks</h2>
+            <button
+              onClick={openTaskModal}
+              disabled={loading}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 font-medium"
+            >
+              + Add Task
+            </button>
+          </div>
+
+          <TaskFormModal
+            isOpen={isTaskModalOpen}
+            isEditing={editingTaskId !== null}
+            title={taskTitle}
+            description={taskDesc}
+            status={taskStatus}
+            priority={taskPriority}
+            dueDate={taskDueDate}
+            userId={taskUserId}
+            users={users}
+            loading={loading}
+            error={error}
+            onSubmit={handleTaskSubmit}
+            onTitleChange={setTaskTitle}
+            onDescriptionChange={setTaskDesc}
+            onStatusChange={setTaskStatus}
+            onPriorityChange={setTaskPriority}
+            onDueDateChange={setTaskDueDate}
+            onUserIdChange={setTaskUserId}
+            onClose={resetTaskForm}
+          />
 
           <div className="grid gap-4">
             {tasks.length === 0 ? (
