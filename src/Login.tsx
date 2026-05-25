@@ -22,11 +22,10 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const performLogin = async (loginEmail: string, loginPassword: string) => {
     setError('');
 
-    if (!email || !password) {
+    if (!loginEmail || !loginPassword) {
       setError('Email and password are required');
       return;
     }
@@ -35,7 +34,7 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps
       setLoading(true);
       const data = await api.post<{ user: { id: number; username: string; email: string }; token: string }>(
         '/api/auth/login',
-        { email, password }
+        { email: loginEmail, password: loginPassword }
       );
 
       if (!data.token) {
@@ -53,28 +52,15 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps
     }
   };
 
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    await performLogin(email, password);
+  };
+
   const debugQuickLogin = async (testAccount: { email: string; password: string }) => {
-    setError('');
-    try {
-      setLoading(true);
-      const data = await api.post<{ user: { id: number; username: string; email: string }; token: string }>(
-        '/api/auth/login',
-        { email: testAccount.email, password: testAccount.password }
-      );
-
-      if (!data.token) {
-        throw new Error('Server did not return an authentication token');
-      }
-
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('token', data.token);
-
-      onLoginSuccess(data.user.username);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
-    } finally {
-      setLoading(false);
-    }
+    setEmail(testAccount.email);
+    setPassword(testAccount.password);
+    await performLogin(testAccount.email, testAccount.password);
   };
 
   return (
