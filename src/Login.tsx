@@ -1,13 +1,13 @@
 import { useState } from 'react';
+import { api } from './api';
 import './Login.css';
 
 interface LoginProps {
   onLoginSuccess: (username: string) => void;
+  onSwitchToRegister: () => void;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5033';
-
-export default function Login({ onLoginSuccess }: LoginProps) {
+export default function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -24,18 +24,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Invalid email or password');
-      }
-
-      const data = await response.json();
+      const data = await api.post<{ user: { id: number; username: string; email: string }; token: string }>(
+        '/api/auth/login',
+        { email, password }
+      );
 
       // Save user info to localStorage
       localStorage.setItem('user', JSON.stringify(data.user));
@@ -94,7 +86,15 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         </form>
 
         <p className="login-footer">
-          Don't have an account? Ask your administrator
+          Don't have an account?{' '}
+          <button
+            type="button"
+            onClick={onSwitchToRegister}
+            className="switch-button"
+            disabled={loading}
+          >
+            Register here
+          </button>
         </p>
       </div>
     </div>

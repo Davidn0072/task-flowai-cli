@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import Login from './Login';
+import Register from './Register';
+import { api } from './api';
 
 interface User {
   id: number;
@@ -33,11 +35,10 @@ interface TaskItem {
   subItemsCount: number;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5033';
-
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<string>('');
+  const [authPage, setAuthPage] = useState<'login' | 'register'>('login');
   const [tab, setTab] = useState<'users' | 'tasks'>('users');
 
   // Users state
@@ -78,6 +79,13 @@ function App() {
         localStorage.removeItem('token');
       }
     }
+
+    // Listen for logout events from api.ts (token expired)
+    const handleLogoutEvent = () => {
+      handleLogout();
+    };
+    window.addEventListener('logout', handleLogoutEvent);
+    return () => window.removeEventListener('logout', handleLogoutEvent);
   }, []);
 
   useEffect(() => {
@@ -93,9 +101,7 @@ function App() {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/users`);
-      if (!response.ok) throw new Error('Failed to load users');
-      const data = await response.json();
+      const data = await api.get<User[]>('/api/users');
       setUsers(data);
       setError('');
     } catch (err) {
@@ -114,22 +120,15 @@ function App() {
 
     try {
       setLoading(true);
-      const url = editingUserId
-        ? `${API_URL}/api/users/${editingUserId}`
-        : `${API_URL}/api/users`;
-
-      const method = editingUserId ? 'PUT' : 'POST';
       const body = editingUserId
         ? { id: editingUserId, username, email, password }
         : { username, email, password };
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) throw new Error('Failed to save user');
+      if (editingUserId) {
+        await api.put(`/api/users/${editingUserId}`, body);
+      } else {
+        await api.post('/api/users', body);
+      }
 
       setUsername('');
       setEmail('');
@@ -154,10 +153,7 @@ function App() {
   const handleUserDelete = async (id: number) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/users/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete user');
+      await api.delete(`/api/users/${id}`);
       setError('');
       loadUsers();
     } catch (err) {
@@ -171,9 +167,7 @@ function App() {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/tasks`);
-      if (!response.ok) throw new Error('Failed to load tasks');
-      const data = await response.json();
+      const data = await api.get<TaskItem[]>('/api/tasks');
       setTasks(data);
       setError('');
     } catch (err) {
@@ -192,37 +186,20 @@ function App() {
 
     try {
       setLoading(true);
-      const url = editingTaskId
-        ? `${API_URL}/api/tasks/${editingTaskId}`
-        : `${API_URL}/api/tasks`;
+      const body = {
+        title: taskTitle,
+        description: taskDesc || null,
+        status: taskStatus,
+        priority: taskPriority,
+        dueDate: taskDueDate || null,
+        userId: parseInt(taskUserId),
+      };
 
-      const method = editingTaskId ? 'PUT' : 'POST';
-      const body = editingTaskId
-        ? {
-            id: editingTaskId,
-            title: taskTitle,
-            description: taskDesc || null,
-            status: taskStatus,
-            priority: taskPriority,
-            dueDate: taskDueDate || null,
-            userId: parseInt(taskUserId),
-          }
-        : {
-            title: taskTitle,
-            description: taskDesc || null,
-            status: taskStatus,
-            priority: taskPriority,
-            dueDate: taskDueDate || null,
-            userId: parseInt(taskUserId),
-          };
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) throw new Error('Failed to save task');
+      if (editingTaskId) {
+        await api.put(`/api/tasks/${editingTaskId}`, { id: editingTaskId, ...body });
+      } else {
+        await api.post('/api/tasks', body);
+      }
 
       setTaskTitle('');
       setTaskDesc('');
@@ -253,10 +230,7 @@ function App() {
   const handleTaskDelete = async (id: number) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/tasks/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete task');
+      await api.delete(`/api/tasks/${id}`);
       setError('');
       loadTasks();
     } catch (err) {
@@ -269,9 +243,7 @@ function App() {
   // ===== SUB ITEMS =====
   const loadSubItems = async (taskId: number) => {
     try {
-      const response = await fetch(`${API_URL}/api/tasksubitems/task/${taskId}`);
-      if (!response.ok) throw new Error('Failed to load sub items');
-      const data = await response.json();
+      const data = await api.get<TaskSubItem[]>(`/api/tasksubitems/task/${taskId}`);
       setSubItems(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error loading sub items');
@@ -286,18 +258,13 @@ function App() {
 
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/tasksubitems`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          taskId,
-          title: subItemTitle,
-          isDone: false,
-          orderIndex: subItems.length,
-        }),
+      await api.post('/api/tasksubitems', {
+        taskId,
+        title: subItemTitle,
+        isDone: false,
+        orderIndex: subItems.length,
       });
 
-      if (!response.ok) throw new Error('Failed to add sub item');
       setSubItemTitle('');
       setError('');
       await loadSubItems(taskId);
@@ -311,16 +278,11 @@ function App() {
 
   const handleToggleSubItem = async (subItem: TaskSubItem) => {
     try {
-      const response = await fetch(`${API_URL}/api/tasksubitems/${subItem.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...subItem,
-          isDone: !subItem.isDone,
-        }),
+      await api.put(`/api/tasksubitems/${subItem.id}`, {
+        ...subItem,
+        isDone: !subItem.isDone,
       });
 
-      if (!response.ok) throw new Error('Failed to update sub item');
       if (expandedTaskId) {
         await loadSubItems(expandedTaskId);
         await loadTasks();
@@ -333,11 +295,8 @@ function App() {
   const handleDeleteSubItem = async (subItemId: number) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/tasksubitems/${subItemId}`, {
-        method: 'DELETE',
-      });
+      await api.delete(`/api/tasksubitems/${subItemId}`);
 
-      if (!response.ok) throw new Error('Failed to delete sub item');
       if (expandedTaskId) {
         await loadSubItems(expandedTaskId);
         await loadTasks();
@@ -352,12 +311,8 @@ function App() {
   const handleGenerateSubtasks = async (taskId: number) => {
     try {
       setGeneratingSubtasksFor(taskId);
-      const response = await fetch(`${API_URL}/api/tasks/${taskId}/generate-subtasks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      await api.post(`/api/tasks/${taskId}/generate-subtasks`, {});
 
-      if (!response.ok) throw new Error('Failed to generate subtasks');
       setError('');
       setExpandedTaskId(taskId);
       await loadSubItems(taskId);
@@ -391,6 +346,18 @@ function App() {
     setIsLoggedIn(true);
   };
 
+  const handleRegisterSuccess = () => {
+    setAuthPage('login');
+  };
+
+  const handleSwitchToRegister = () => {
+    setAuthPage('register');
+  };
+
+  const handleSwitchToLogin = () => {
+    setAuthPage('login');
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
@@ -400,7 +367,20 @@ function App() {
   };
 
   if (!isLoggedIn) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+    if (authPage === 'register') {
+      return (
+        <Register
+          onRegisterSuccess={handleRegisterSuccess}
+          onSwitchToLogin={handleSwitchToLogin}
+        />
+      );
+    }
+    return (
+      <Login
+        onLoginSuccess={handleLoginSuccess}
+        onSwitchToRegister={handleSwitchToRegister}
+      />
+    );
   }
 
   return (
