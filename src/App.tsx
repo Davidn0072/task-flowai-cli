@@ -67,6 +67,8 @@ function App() {
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
   const [subItemTitle, setSubItemTitle] = useState('');
   const [subItems, setSubItems] = useState<TaskSubItem[]>([]);
+  const [editingSubItemId, setEditingSubItemId] = useState<number | null>(null);
+  const [editingSubItemTitle, setEditingSubItemTitle] = useState('');
   const [generatingSubtasksFor, setGeneratingSubtasksFor] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -107,6 +109,10 @@ function App() {
 
   useEffect(() => {
     if (expandedTaskId) loadSubItems(expandedTaskId);
+    else {
+      setEditingSubItemId(null);
+      setEditingSubItemTitle('');
+    }
   }, [expandedTaskId]);
 
   // ===== USERS =====
@@ -294,11 +300,55 @@ function App() {
     }
   };
 
+  const startSubItemEdit = (subItem: TaskSubItem) => {
+    setEditingSubItemId(subItem.id);
+    setEditingSubItemTitle(subItem.title);
+  };
+
+  const cancelSubItemEdit = () => {
+    setEditingSubItemId(null);
+    setEditingSubItemTitle('');
+  };
+
+  const handleSaveSubItem = async (subItem: TaskSubItem) => {
+    if (!editingSubItemTitle.trim()) {
+      setError('Sub item title required');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await api.put(`/api/tasksubitems/${subItem.id}`, {
+        id: subItem.id,
+        taskId: subItem.taskId,
+        title: editingSubItemTitle.trim(),
+        isDone: subItem.isDone,
+        orderIndex: subItem.orderIndex,
+      });
+
+      cancelSubItemEdit();
+      setError('');
+      if (expandedTaskId) {
+        await loadSubItems(expandedTaskId);
+        await loadTasks();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error updating sub item');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleToggleSubItem = async (subItem: TaskSubItem) => {
+    if (editingSubItemId === subItem.id) return;
+
     try {
       await api.put(`/api/tasksubitems/${subItem.id}`, {
-        ...subItem,
+        id: subItem.id,
+        taskId: subItem.taskId,
+        title: subItem.title,
         isDone: !subItem.isDone,
+        orderIndex: subItem.orderIndex,
       });
 
       if (expandedTaskId) {
@@ -574,18 +624,59 @@ function App() {
                                     type="checkbox"
                                     checked={subItem.isDone}
                                     onChange={() => handleToggleSubItem(subItem)}
-                                    className="w-4 h-4"
+                                    disabled={loading || editingSubItemId === subItem.id}
+                                    className="w-4 h-4 shrink-0"
                                   />
-                                  <span className={subItem.isDone ? 'line-through text-gray-400' : ''}>
-                                    {subItem.title}
-                                  </span>
-                                  <button
-                                    onClick={() => handleDeleteSubItem(subItem.id)}
-                                    disabled={loading}
-                                    className="ml-auto text-red-500 hover:text-red-700 text-xs"
-                                  >
-                                    ✕
-                                  </button>
+                                  {editingSubItemId === subItem.id ? (
+                                    <>
+                                      <input
+                                        type="text"
+                                        value={editingSubItemTitle}
+                                        onChange={(e) => setEditingSubItemTitle(e.target.value)}
+                                        className="flex-1 px-2 py-1 border rounded text-sm"
+                                        disabled={loading}
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') handleSaveSubItem(subItem);
+                                          if (e.key === 'Escape') cancelSubItemEdit();
+                                        }}
+                                      />
+                                      <button
+                                        onClick={() => handleSaveSubItem(subItem)}
+                                        disabled={loading}
+                                        className="text-green-600 hover:text-green-800 text-xs font-medium"
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={cancelSubItemEdit}
+                                        disabled={loading}
+                                        className="text-gray-500 hover:text-gray-700 text-xs"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className={`flex-1 ${subItem.isDone ? 'line-through text-gray-400' : ''}`}>
+                                        {subItem.title}
+                                      </span>
+                                      <button
+                                        onClick={() => startSubItemEdit(subItem)}
+                                        disabled={loading}
+                                        className="text-blue-500 hover:text-blue-700 text-xs"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteSubItem(subItem.id)}
+                                        disabled={loading}
+                                        className="text-red-500 hover:text-red-700 text-xs"
+                                      >
+                                        ✕
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               ))}
                           </div>
