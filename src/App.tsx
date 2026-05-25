@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './App.css';
+import Login from './Login';
 
 interface User {
   id: number;
@@ -35,6 +36,8 @@ interface TaskItem {
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5033';
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string>('');
   const [tab, setTab] = useState<'users' | 'tasks'>('users');
 
   // Users state
@@ -62,6 +65,20 @@ function App() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setCurrentUser(user.username);
+        setIsLoggedIn(true);
+      } catch {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (tab === 'users') loadUsers();
@@ -369,9 +386,37 @@ function App() {
     setEditingUserId(null);
   };
 
+  const handleLoginSuccess = (username: string) => {
+    setCurrentUser(username);
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    setCurrentUser('');
+    setIsLoggedIn(false);
+    setTab('users');
+  };
+
+  if (!isLoggedIn) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="max-w-5xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">TaskFlow</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">TaskFlow</h1>
+        <div className="flex items-center gap-4">
+          <span className="text-gray-600">Welcome, {currentUser}</span>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
 
       <div className="flex gap-2 mb-6">
         <button
