@@ -4,11 +4,11 @@ import './Login.css';
 
 const DEBUG_ACCOUNTS = [
   { email: 'david@example.com', password: '123456' },
-  { email: 'noa@test.com', password: '12345672' },
+  { email: 'noa@test.com', password: '123456' },
   { email: 'john@test.com', password: '123456' },
   { email: 'jane@test.com', password: '123456' },
-  { email: 'andrey@test.com', password: '1234567' },
-  { email: 'mariana@test.com', password: '123456' },
+  { email: 'andrey@test.com', password: '123456' },
+  { email: 'mariana@test.com', password: '12346' },
 ];
 
 interface LoginProps {

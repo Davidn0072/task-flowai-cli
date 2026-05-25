@@ -55,7 +55,17 @@ export const apiCall = async <T = any>(
     throw new Error(errorData.message || `HTTP Error: ${response.status}`);
   }
 
-  return response.json();
+  // PUT/DELETE often return 204 No Content with an empty body
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await response.text();
+  if (!text) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
 };
 
 // Convenience methods

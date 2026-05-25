@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import Login from './Login';
 import Register from './Register';
+import Sidebar from './Sidebar';
+import UserFormModal from './UserFormModal';
 import { api } from './api';
 
 interface User {
@@ -47,6 +49,7 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
   // Tasks state
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -139,6 +142,7 @@ function App() {
       setPassword('');
       setEditingUserId(null);
       setError('');
+      setIsUserModalOpen(false);
       loadUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error saving user');
@@ -152,6 +156,8 @@ function App() {
     setEmail(user.email);
     setPassword(user.password);
     setEditingUserId(user.id);
+    setIsUserModalOpen(true);
+    setError('');
   };
 
   const handleUserDelete = async (id: number) => {
@@ -343,6 +349,13 @@ function App() {
     setEmail('');
     setPassword('');
     setEditingUserId(null);
+    setIsUserModalOpen(false);
+    setError('');
+  };
+
+  const openUserModal = () => {
+    resetUserForm();
+    setIsUserModalOpen(true);
   };
 
   const handleLoginSuccess = (username: string) => {
@@ -388,88 +401,45 @@ function App() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">TaskFlow</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-gray-600">Welcome, {currentUser}</span>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+    <div className="flex">
+      <Sidebar
+        currentTab={tab}
+        onTabChange={setTab}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
 
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setTab('users')}
-          className={`px-4 py-2 rounded ${tab === 'users' ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
-        >
-          Users
-        </button>
-        <button
-          onClick={() => setTab('tasks')}
-          className={`px-4 py-2 rounded ${tab === 'tasks' ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
-        >
-          Tasks
-        </button>
-      </div>
-
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}
-      {loading && <p className="text-gray-600 mb-4">Loading...</p>}
+      <main className="flex-1 ml-64 p-6">
+        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}
+        {loading && <p className="text-gray-600 mb-4">Loading...</p>}
 
       {tab === 'users' && (
         <div>
-          <h2 className="text-2xl font-bold mb-4">Users</h2>
-          <form onSubmit={handleUserSubmit} className="bg-gray-100 p-4 rounded mb-6">
-            <div className="mb-4">
-              <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 border rounded mb-2"
-                disabled={loading}
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border rounded mb-2"
-                disabled={loading}
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border rounded mb-2"
-                disabled={loading}
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400"
-              >
-                {editingUserId ? 'Update' : 'Add'} User
-              </button>
-              {editingUserId && (
-                <button
-                  type="button"
-                  onClick={resetUserForm}
-                  disabled={loading}
-                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </form>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Users</h2>
+            <button
+              onClick={openUserModal}
+              disabled={loading}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:bg-gray-400 font-medium"
+            >
+              + Add User
+            </button>
+          </div>
+
+          <UserFormModal
+            isOpen={isUserModalOpen}
+            user={editingUserId ? users.find(u => u.id === editingUserId) || null : null}
+            username={username}
+            email={email}
+            password={password}
+            loading={loading}
+            error={error}
+            onSubmit={handleUserSubmit}
+            onUsernameChange={setUsername}
+            onEmailChange={setEmail}
+            onPasswordChange={setPassword}
+            onClose={resetUserForm}
+          />
 
           <div className="grid gap-4">
             {users.length === 0 ? (
@@ -701,6 +671,7 @@ function App() {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }
