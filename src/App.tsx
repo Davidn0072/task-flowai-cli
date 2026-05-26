@@ -5,6 +5,7 @@ import Login from './Login';
 import Register from './Register';
 import Sidebar from './Sidebar';
 import TasksView from './TasksView';
+import BoardView from './BoardView';
 import UsersView from './UsersView';
 
 function App() {
@@ -69,8 +70,9 @@ function App() {
       <main className="flex-1 ml-64 p-6">
         <Routes>
           <Route path="/tasks" element={<TasksView />} />
+          <Route path="/board" element={<BoardView />} />
           <Route path="/users" element={<UsersView />} />
-          <Route path="*" element={<Navigate to="/tasks" replace />} />
+          <Route path="*" element={<Navigate to="/board" replace />} />
         </Routes>
       </main>
     </div>

@@ -19,6 +19,9 @@ export default function Sidebar({ currentUser, onLogout }: SidebarProps) {
       </div>
 
       <nav className="flex-1 space-y-2">
+        <NavLink to="/board" className={linkClass}>
+          📌 Board
+        </NavLink>
         <NavLink to="/tasks" className={linkClass}>
           📋 Tasks
         </NavLink>
