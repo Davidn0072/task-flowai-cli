@@ -1,11 +1,16 @@
+import { NavLink } from 'react-router-dom';
+
 interface SidebarProps {
-  currentTab: 'users' | 'tasks';
-  onTabChange: (tab: 'users' | 'tasks') => void;
   currentUser: string;
   onLogout: () => void;
 }
 
-export default function Sidebar({ currentTab, onTabChange, currentUser, onLogout }: SidebarProps) {
+export default function Sidebar({ currentUser, onLogout }: SidebarProps) {
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `block w-full text-left px-4 py-3 rounded-lg transition ${
+      isActive ? 'bg-white text-blue-600 font-semibold' : 'text-white hover:bg-blue-500'
+    }`;
+
   return (
     <aside className="w-64 bg-blue-600 text-white h-screen fixed left-0 top-0 flex flex-col p-6">
       <div className="mb-8">
@@ -14,26 +19,12 @@ export default function Sidebar({ currentTab, onTabChange, currentUser, onLogout
       </div>
 
       <nav className="flex-1 space-y-2">
-        <button
-          onClick={() => onTabChange('tasks')}
-          className={`w-full text-left px-4 py-3 rounded-lg transition ${
-            currentTab === 'tasks'
-              ? 'bg-white text-blue-600 font-semibold'
-              : 'text-white hover:bg-blue-500'
-          }`}
-        >
+        <NavLink to="/tasks" className={linkClass}>
           📋 Tasks
-        </button>
-        <button
-          onClick={() => onTabChange('users')}
-          className={`w-full text-left px-4 py-3 rounded-lg transition ${
-            currentTab === 'users'
-              ? 'bg-white text-blue-600 font-semibold'
-              : 'text-white hover:bg-blue-500'
-          }`}
-        >
+        </NavLink>
+        <NavLink to="/users" className={linkClass}>
           👥 Users
-        </button>
+        </NavLink>
       </nav>
 
       <button

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Login from './Login';
 import Register from './Register';
@@ -10,7 +11,6 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<string>('');
   const [authPage, setAuthPage] = useState<'login' | 'register'>('login');
-  const [tab, setTab] = useState<'users' | 'tasks'>('users');
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -44,7 +44,6 @@ function App() {
     localStorage.removeItem('token');
     setCurrentUser('');
     setIsLoggedIn(false);
-    setTab('users');
   };
 
   if (!isLoggedIn) {
@@ -66,15 +65,13 @@ function App() {
 
   return (
     <div className="flex">
-      <Sidebar
-        currentTab={tab}
-        onTabChange={setTab}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-      />
+      <Sidebar currentUser={currentUser} onLogout={handleLogout} />
       <main className="flex-1 ml-64 p-6">
-        {tab === 'users' && <UsersView />}
-        {tab === 'tasks' && <TasksView />}
+        <Routes>
+          <Route path="/tasks" element={<TasksView />} />
+          <Route path="/users" element={<UsersView />} />
+          <Route path="*" element={<Navigate to="/tasks" replace />} />
+        </Routes>
       </main>
     </div>
   );
