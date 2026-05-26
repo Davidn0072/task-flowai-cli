@@ -28,3 +28,17 @@ export interface TaskItem {
   subItems?: TaskSubItem[];
   subItemsCount: number;
 }
+
+export interface SearchFilter {
+  employee: string | null;
+  priority: string | null;
+  status: string | null;
+  searchText: string | null;
+  dateFrom: string | null;
+  dateTo: string | null;
+}
+
+export interface AiSearchResult {
+  tasks: TaskItem[];
+  parsedFilter: SearchFilter;
+}

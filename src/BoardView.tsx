@@ -3,7 +3,7 @@ import TaskCard from './TaskCard';
 import TaskFormModal from './TaskFormModal';
 import { useTasks } from './useTasks';
 import { api } from './api';
-import type { TaskItem } from './types';
+import type { TaskItem, SearchFilter } from './types';
 
 const COLUMNS: { status: string; label: string; color: string }[] = [
   { status: 'Todo',       label: 'To Do',       color: 'bg-gray-200 text-gray-700'   },
@@ -32,11 +32,21 @@ export default function BoardView() {
   } = useTasks();
 
   const [searchMode, setSearchMode] = useState<SearchMode>('fields');
+
+  // Fields mode state
   const [filterPriority, setFilterPriority] = useState('');
   const [searchText, setSearchText] = useState('');
   const [searchTasks, setSearchTasks] = useState<TaskItem[] | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
 
+  // AI mode state
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiTasks, setAiTasks] = useState<TaskItem[] | null>(null);
+  const [aiParsedFilter, setAiParsedFilter] = useState<SearchFilter | null>(null);
+
+  // Fields mode: debounced text search
   useEffect(() => {
     if (!searchText.trim()) {
       setSearchTasks(null);
@@ -53,18 +63,67 @@ export default function BoardView() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
+  // AI mode: debounced natural language search
+  useEffect(() => {
+    if (!aiQuery.trim()) {
+      setAiTasks(null);
+      setAiParsedFilter(null);
+      setAiError(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setAiLoading(true);
+      setAiError(null);
+      try {
+        const result = await api.post<{ tasks: TaskItem[]; parsedFilter: SearchFilter }>(
+          '/api/tasks/ai-search',
+          { query: aiQuery }
+        );
+        setAiTasks(result.tasks);
+        setAiParsedFilter(result.parsedFilter);
+      } catch (err: any) {
+        setAiError(err?.message ?? 'AI search failed');
+        setAiTasks(null);
+        setAiParsedFilter(null);
+      } finally {
+        setAiLoading(false);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [aiQuery]);
+
+  const handleModeChange = (mode: SearchMode) => {
+    setSearchMode(mode);
+    if (mode === 'fields') {
+      setAiQuery('');
+      setAiTasks(null);
+      setAiParsedFilter(null);
+      setAiError(null);
+    } else {
+      setSearchText('');
+      setSearchTasks(null);
+    }
+  };
+
+  const clearAiSearch = () => {
+    setAiQuery('');
+    setAiTasks(null);
+    setAiParsedFilter(null);
+    setAiError(null);
+  };
+
   const toggleUser = (userId: number) =>
     setSelectedUserIds((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
 
-  const displayTasks = searchTasks ?? tasks;
+  const displayTasks = searchMode === 'ai' ? (aiTasks ?? tasks) : (searchTasks ?? tasks);
 
   const tasksByStatus = (status: string): TaskItem[] =>
     displayTasks.filter((t) =>
       t.status === status &&
-      (filterPriority === '' || t.priority === filterPriority) &&
-      (selectedUserIds.length === 0 || selectedUserIds.includes(t.userId))
+      (searchMode === 'ai' || filterPriority === '' || t.priority === filterPriority) &&
+      (searchMode === 'ai' || selectedUserIds.length === 0 || selectedUserIds.includes(t.userId))
     );
 
   return (
@@ -88,13 +147,13 @@ export default function BoardView() {
         {/* Mode Toggle */}
         <div className="flex rounded-md border border-gray-300 overflow-hidden text-sm font-medium">
           <button
-            onClick={() => setSearchMode('fields')}
+            onClick={() => handleModeChange('fields')}
             className={`px-3 py-1.5 transition-colors ${searchMode === 'fields' ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             Fields
           </button>
           <button
-            onClick={() => setSearchMode('ai')}
+            onClick={() => handleModeChange('ai')}
             className={`px-3 py-1.5 transition-colors border-l border-gray-300 ${searchMode === 'ai' ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
           >
             ✦ AI
@@ -186,7 +245,66 @@ export default function BoardView() {
 
         {/* AI Mode */}
         {searchMode === 'ai' && (
-          <span className="text-sm text-gray-400 italic">AI search — coming soon</span>
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={aiQuery}
+                onChange={(e) => setAiQuery(e.target.value)}
+                placeholder='e.g. "high priority bugs assigned to Jane"'
+                className="border border-blue-300 rounded-md px-3 py-1 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+              {aiLoading && (
+                <span className="text-xs text-blue-400 whitespace-nowrap">Searching...</span>
+              )}
+              {aiQuery && !aiLoading && (
+                <button
+                  onClick={clearAiSearch}
+                  className="text-gray-400 hover:text-gray-600 text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {aiError && (
+              <span className="text-xs text-red-500">{aiError}</span>
+            )}
+            {aiParsedFilter && (
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-xs text-gray-400">Understood:</span>
+                {aiParsedFilter.employee && (
+                  <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                    employee: {aiParsedFilter.employee}
+                  </span>
+                )}
+                {aiParsedFilter.priority && (
+                  <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">
+                    priority: {aiParsedFilter.priority}
+                  </span>
+                )}
+                {aiParsedFilter.status && (
+                  <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">
+                    status: {aiParsedFilter.status}
+                  </span>
+                )}
+                {aiParsedFilter.searchText && (
+                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                    keywords: "{aiParsedFilter.searchText}"
+                  </span>
+                )}
+                {aiParsedFilter.dateFrom && (
+                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
+                    from: {aiParsedFilter.dateFrom}
+                  </span>
+                )}
+                {aiParsedFilter.dateTo && (
+                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
+                    to: {aiParsedFilter.dateTo}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
