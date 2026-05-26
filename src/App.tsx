@@ -5,38 +5,9 @@ import Register from './Register';
 import Sidebar from './Sidebar';
 import UserFormModal from './UserFormModal';
 import TaskFormModal from './TaskFormModal';
+import TaskCard from './TaskCard';
 import { api } from './api';
-
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  password: string;
-  createdAt: string;
-}
-
-interface TaskSubItem {
-  id: number;
-  taskId: number;
-  title: string;
-  isDone: boolean;
-  orderIndex: number | null;
-  createdAt: string;
-}
-
-interface TaskItem {
-  id: number;
-  title: string;
-  description: string | null;
-  status: string | null;
-  priority: string | null;
-  dueDate: string | null;
-  createdAt: string;
-  userId: number;
-  user?: User;
-  subItems?: TaskSubItem[];
-  subItemsCount: number;
-}
+import type { User, TaskSubItem, TaskItem } from './types';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -585,150 +556,29 @@ function App() {
               <p className="text-gray-600">No tasks yet</p>
             ) : (
               tasks.map((task) => (
-                <div key={task.id} className="bg-white border rounded p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <p className="font-bold text-lg">{task.title}</p>
-                    <span className={`px-2 py-1 rounded text-sm text-white ${
-                      task.status === 'Done' ? 'bg-green-500' :
-                      task.status === 'InProgress' ? 'bg-yellow-500' :
-                      'bg-gray-500'
-                    }`}>
-                      {task.status}
-                    </span>
-                  </div>
-                  {task.description && <p className="text-gray-600 mb-2">{task.description}</p>}
-                  <div className="text-sm text-gray-500 mb-3">
-                    <p>Priority: {task.priority}</p>
-                    {task.dueDate && <p>Due: {new Date(task.dueDate).toLocaleDateString()}</p>}
-                    <p>User: {task.user?.username || 'Unknown'}</p>
-                  </div>
-
-                  {/* Sub Items Section */}
-                  <div className="mb-3 bg-gray-50 p-3 rounded">
-                    <button
-                      onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}
-                      className="font-semibold text-sm text-blue-600 hover:underline mb-2"
-                    >
-                      {expandedTaskId === task.id ? '▼' : '▶'} Subtasks ({task.subItemsCount})
-                    </button>
-
-                    {expandedTaskId === task.id && (
-                      <div>
-                        {subItems.filter(s => s.taskId === task.id).length > 0 && (
-                          <div className="mb-2 space-y-1">
-                            {subItems
-                              .filter(s => s.taskId === task.id)
-                              .map((subItem) => (
-                                <div key={subItem.id} className="flex items-center gap-2 text-sm">
-                                  <input
-                                    type="checkbox"
-                                    checked={subItem.isDone}
-                                    onChange={() => handleToggleSubItem(subItem)}
-                                    disabled={loading || editingSubItemId === subItem.id}
-                                    className="w-4 h-4 shrink-0"
-                                  />
-                                  {editingSubItemId === subItem.id ? (
-                                    <>
-                                      <input
-                                        type="text"
-                                        value={editingSubItemTitle}
-                                        onChange={(e) => setEditingSubItemTitle(e.target.value)}
-                                        className="flex-1 px-2 py-1 border rounded text-sm"
-                                        disabled={loading}
-                                        autoFocus
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') handleSaveSubItem(subItem);
-                                          if (e.key === 'Escape') cancelSubItemEdit();
-                                        }}
-                                      />
-                                      <button
-                                        onClick={() => handleSaveSubItem(subItem)}
-                                        disabled={loading}
-                                        className="text-green-600 hover:text-green-800 text-xs font-medium"
-                                      >
-                                        Save
-                                      </button>
-                                      <button
-                                        onClick={cancelSubItemEdit}
-                                        disabled={loading}
-                                        className="text-gray-500 hover:text-gray-700 text-xs"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span className={`flex-1 ${subItem.isDone ? 'line-through text-gray-400' : ''}`}>
-                                        {subItem.title}
-                                      </span>
-                                      <button
-                                        onClick={() => startSubItemEdit(subItem)}
-                                        disabled={loading}
-                                        className="text-blue-500 hover:text-blue-700 text-xs"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteSubItem(subItem.id)}
-                                        disabled={loading}
-                                        className="text-red-500 hover:text-red-700 text-xs"
-                                      >
-                                        ✕
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              ))}
-                          </div>
-                        )}
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="New subtask..."
-                            value={expandedTaskId === task.id ? subItemTitle : ''}
-                            onChange={(e) => setSubItemTitle(e.target.value)}
-                            className="flex-1 px-2 py-1 border rounded text-sm"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleAddSubItem(task.id);
-                            }}
-                            disabled={loading}
-                          />
-                          <button
-                            onClick={() => handleAddSubItem(task.id)}
-                            disabled={loading}
-                            className="bg-blue-500 text-white px-2 py-1 rounded text-sm hover:bg-blue-600 disabled:bg-gray-400"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleTaskEdit(task)}
-                      disabled={loading}
-                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:bg-gray-400"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleGenerateSubtasks(task.id)}
-                      disabled={loading || generatingSubtasksFor === task.id}
-                      className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 disabled:bg-gray-400 text-sm"
-                    >
-                      {generatingSubtasksFor === task.id ? 'Generating...' : '✨ AI Subtasks'}
-                    </button>
-                    <button
-                      onClick={() => handleTaskDelete(task.id)}
-                      disabled={loading}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:bg-gray-400"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  expandedTaskId={expandedTaskId}
+                  subItems={subItems}
+                  subItemTitle={expandedTaskId === task.id ? subItemTitle : ''}
+                  editingSubItemId={editingSubItemId}
+                  editingSubItemTitle={editingSubItemTitle}
+                  loading={loading}
+                  generatingSubtasksFor={generatingSubtasksFor}
+                  onEdit={handleTaskEdit}
+                  onDelete={handleTaskDelete}
+                  onToggleExpand={(id) => setExpandedTaskId(expandedTaskId === id ? null : id)}
+                  onAddSubItem={handleAddSubItem}
+                  onToggleSubItem={handleToggleSubItem}
+                  onStartSubItemEdit={startSubItemEdit}
+                  onSaveSubItem={handleSaveSubItem}
+                  onCancelSubItemEdit={cancelSubItemEdit}
+                  onDeleteSubItem={handleDeleteSubItem}
+                  onGenerateSubtasks={handleGenerateSubtasks}
+                  onSubItemTitleChange={setSubItemTitle}
+                  onEditingSubItemTitleChange={setEditingSubItemTitle}
+                />
               ))
             )}
           </div>
