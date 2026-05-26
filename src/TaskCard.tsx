@@ -1,5 +1,18 @@
 import type { TaskItem, TaskSubItem } from './types';
 
+const AVATAR_COLORS = [
+  'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500',
+  'bg-lime-500', 'bg-green-500', 'bg-emerald-500', 'bg-teal-500',
+  'bg-cyan-500', 'bg-sky-500', 'bg-blue-500', 'bg-indigo-500',
+  'bg-violet-500', 'bg-purple-500', 'bg-fuchsia-500', 'bg-pink-500',
+];
+
+function avatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
 interface TaskCardProps {
   task: TaskItem;
   expandedTaskId: number | null;
@@ -65,7 +78,18 @@ export default function TaskCard({
       <div className="text-sm text-gray-500 mb-3">
         <p>Priority: {task.priority}</p>
         {task.dueDate && <p>Due: {new Date(task.dueDate).toLocaleDateString()}</p>}
-        <p>User: {task.user?.username || 'Unknown'}</p>
+        <div className="flex items-center gap-2 mt-1">
+          {task.user ? (
+            <>
+              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${avatarColor(task.user.username)}`}>
+                {task.user.username[0].toUpperCase()}
+              </span>
+              <span>{task.user.username}</span>
+            </>
+          ) : (
+            <span>Unknown</span>
+          )}
+        </div>
       </div>
 
       <div className="mb-3 bg-gray-50 p-3 rounded">
