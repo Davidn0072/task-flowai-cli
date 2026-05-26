@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TaskCard from './TaskCard';
 import TaskFormModal from './TaskFormModal';
 import { useTasks } from './useTasks';
+import { api } from './api';
 import type { TaskItem } from './types';
 
 const COLUMNS: { status: string; label: string; color: string }[] = [
@@ -32,9 +33,29 @@ export default function BoardView() {
 
   const [searchMode, setSearchMode] = useState<SearchMode>('fields');
   const [filterPriority, setFilterPriority] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [searchTasks, setSearchTasks] = useState<TaskItem[] | null>(null);
+
+  useEffect(() => {
+    if (!searchText.trim()) {
+      setSearchTasks(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const results = await api.get<TaskItem[]>(`/api/tasks/search?q=${encodeURIComponent(searchText)}`);
+        setSearchTasks(results);
+      } catch {
+        setSearchTasks(null);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const displayTasks = searchTasks ?? tasks;
 
   const tasksByStatus = (status: string): TaskItem[] =>
-    tasks.filter((t) =>
+    displayTasks.filter((t) =>
       t.status === status &&
       (filterPriority === '' || t.priority === filterPriority)
     );
@@ -75,21 +96,41 @@ export default function BoardView() {
 
         {/* Fields Mode */}
         {searchMode === 'fields' && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 font-medium">Priority:</span>
-            {PRIORITIES.map(({ value, label, activeClass }) => (
-              <button
-                key={value}
-                onClick={() => setFilterPriority(value)}
-                className={`px-3 py-1 text-xs rounded-full font-medium border transition-colors ${
-                  filterPriority === value
-                    ? activeClass
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 font-medium">Priority:</span>
+              {PRIORITIES.map(({ value, label, activeClass }) => (
+                <button
+                  key={value}
+                  onClick={() => setFilterPriority(value)}
+                  className={`px-3 py-1 text-xs rounded-full font-medium border transition-colors ${
+                    filterPriority === value
+                      ? activeClass
+                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 font-medium">Search:</span>
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Title or description..."
+                className="border border-gray-300 rounded-md px-3 py-1 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+              {searchText && (
+                <button
+                  onClick={() => setSearchText('')}
+                  className="text-gray-400 hover:text-gray-600 text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
         )}
 
