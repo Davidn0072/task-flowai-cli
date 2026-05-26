@@ -35,6 +35,7 @@ export default function BoardView() {
   const [filterPriority, setFilterPriority] = useState('');
   const [searchText, setSearchText] = useState('');
   const [searchTasks, setSearchTasks] = useState<TaskItem[] | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (!searchText.trim()) {
@@ -52,12 +53,18 @@ export default function BoardView() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
+  const toggleUser = (userId: number) =>
+    setSelectedUserIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+
   const displayTasks = searchTasks ?? tasks;
 
   const tasksByStatus = (status: string): TaskItem[] =>
     displayTasks.filter((t) =>
       t.status === status &&
-      (filterPriority === '' || t.priority === filterPriority)
+      (filterPriority === '' || t.priority === filterPriority) &&
+      (selectedUserIds.length === 0 || selectedUserIds.includes(t.userId))
     );
 
   return (
@@ -96,38 +103,81 @@ export default function BoardView() {
 
         {/* Fields Mode */}
         {searchMode === 'fields' && (
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 font-medium">Priority:</span>
-              {PRIORITIES.map(({ value, label, activeClass }) => (
-                <button
-                  key={value}
-                  onClick={() => setFilterPriority(value)}
-                  className={`px-3 py-1 text-xs rounded-full font-medium border transition-colors ${
-                    filterPriority === value
-                      ? activeClass
-                      : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+          <div className="flex flex-col gap-2 flex-1">
+            {/* Row 1: Priority + Text search */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 font-medium">Priority:</span>
+                {PRIORITIES.map(({ value, label, activeClass }) => (
+                  <button
+                    key={value}
+                    onClick={() => setFilterPriority(value)}
+                    className={`px-3 py-1 text-xs rounded-full font-medium border transition-colors ${
+                      filterPriority === value
+                        ? activeClass
+                        : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 font-medium">Search:</span>
+                <input
+                  type="text"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="Title or description..."
+                  className="border border-gray-300 rounded-md px-3 py-1 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                {searchText && (
+                  <button
+                    onClick={() => setSearchText('')}
+                    className="text-gray-400 hover:text-gray-600 text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 font-medium">Search:</span>
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Title or description..."
-                className="border border-gray-300 rounded-md px-3 py-1 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
-              {searchText && (
+            {/* Row 2: Users */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-gray-500 font-medium">Users:</span>
+              <select
+                value=""
+                onChange={(e) => {
+                  const id = Number(e.target.value);
+                  if (id) toggleUser(id);
+                }}
+                className="border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white text-gray-600"
+              >
+                <option value="">Add user...</option>
+                {users
+                  .filter((u) => !selectedUserIds.includes(u.id))
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>{u.username}</option>
+                  ))}
+              </select>
+              {selectedUserIds.map((uid) => {
+                const user = users.find((u) => u.id === uid);
+                if (!user) return null;
+                return (
+                  <span
+                    key={uid}
+                    className="flex items-center gap-1 px-3 py-1 text-xs rounded-full font-medium bg-purple-500 text-white"
+                  >
+                    {user.username}
+                    <button onClick={() => toggleUser(uid)} className="hover:opacity-70 leading-none">✕</button>
+                  </span>
+                );
+              })}
+              {selectedUserIds.length > 0 && (
                 <button
-                  onClick={() => setSearchText('')}
+                  onClick={() => setSelectedUserIds([])}
                   className="text-gray-400 hover:text-gray-600 text-xs"
                 >
-                  ✕
+                  clear all
                 </button>
               )}
             </div>
