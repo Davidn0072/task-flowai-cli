@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import TaskCard from './TaskCard';
 import TaskFormModal from './TaskFormModal';
 import { useTasks } from './useTasks';
@@ -8,6 +9,15 @@ const COLUMNS: { status: string; label: string; color: string }[] = [
   { status: 'InProgress', label: 'In Progress',  color: 'bg-yellow-200 text-yellow-800' },
   { status: 'Done',       label: 'Done',         color: 'bg-green-200 text-green-800'  },
 ];
+
+const PRIORITIES: { value: string; label: string; activeClass: string }[] = [
+  { value: '',       label: 'All',    activeClass: 'bg-blue-500 text-white border-blue-500'   },
+  { value: 'High',   label: 'High',   activeClass: 'bg-red-500 text-white border-red-500'     },
+  { value: 'Medium', label: 'Medium', activeClass: 'bg-yellow-500 text-white border-yellow-500' },
+  { value: 'Low',    label: 'Low',    activeClass: 'bg-green-500 text-white border-green-500'  },
+];
+
+type SearchMode = 'fields' | 'ai';
 
 export default function BoardView() {
   const {
@@ -20,15 +30,21 @@ export default function BoardView() {
     expandedTaskId, sharedCardProps,
   } = useTasks();
 
+  const [searchMode, setSearchMode] = useState<SearchMode>('fields');
+  const [filterPriority, setFilterPriority] = useState('');
+
   const tasksByStatus = (status: string): TaskItem[] =>
-    tasks.filter((t) => t.status === status);
+    tasks.filter((t) =>
+      t.status === status &&
+      (filterPriority === '' || t.priority === filterPriority)
+    );
 
   return (
     <div>
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}
       {loading && <p className="text-gray-600 mb-4">Loading...</p>}
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Board</h2>
         <button
           onClick={openTaskModal}
@@ -37,6 +53,50 @@ export default function BoardView() {
         >
           + Add Task
         </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="flex items-center gap-4 mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+        {/* Mode Toggle */}
+        <div className="flex rounded-md border border-gray-300 overflow-hidden text-sm font-medium">
+          <button
+            onClick={() => setSearchMode('fields')}
+            className={`px-3 py-1.5 transition-colors ${searchMode === 'fields' ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            Fields
+          </button>
+          <button
+            onClick={() => setSearchMode('ai')}
+            className={`px-3 py-1.5 transition-colors border-l border-gray-300 ${searchMode === 'ai' ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            ✦ AI
+          </button>
+        </div>
+
+        {/* Fields Mode */}
+        {searchMode === 'fields' && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 font-medium">Priority:</span>
+            {PRIORITIES.map(({ value, label, activeClass }) => (
+              <button
+                key={value}
+                onClick={() => setFilterPriority(value)}
+                className={`px-3 py-1 text-xs rounded-full font-medium border transition-colors ${
+                  filterPriority === value
+                    ? activeClass
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* AI Mode */}
+        {searchMode === 'ai' && (
+          <span className="text-sm text-gray-400 italic">AI search — coming soon</span>
+        )}
       </div>
 
       <TaskFormModal
