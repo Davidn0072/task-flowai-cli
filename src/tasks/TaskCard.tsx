@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { TaskItem, TaskSubItem } from '../shared/types';
 
 const AVATAR_COLORS = [
@@ -59,6 +60,7 @@ export default function TaskCard({
   onEditingSubItemTitleChange,
 }: TaskCardProps) {
   const isExpanded = expandedTaskId === task.id;
+  const subItemInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="bg-white border rounded p-4">
@@ -171,6 +173,7 @@ export default function TaskCard({
             )}
             <div className="flex gap-2">
               <input
+                ref={subItemInputRef}
                 type="text"
                 placeholder="New subtask..."
                 value={subItemTitle}
@@ -182,7 +185,7 @@ export default function TaskCard({
                 disabled={loading}
               />
               <button
-                onClick={() => onAddSubItem(task.id)}
+                onClick={() => { onAddSubItem(task.id); subItemInputRef.current?.focus(); }}
                 disabled={loading}
                 className="bg-blue-500 text-white px-2 py-1 rounded text-sm hover:bg-blue-600 disabled:bg-gray-400"
               >
