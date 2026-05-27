@@ -7,7 +7,11 @@ export default function UsersView() {
   const [users, setUsers] = useState<User[]>([]);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changePassword, setChangePassword] = useState(false);
+  const [originalPassword, setOriginalPassword] = useState('');
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,23 +36,45 @@ export default function UsersView() {
 
   const handleUserSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!username || !email || !password) {
-      setError('All fields required');
+    const isEditing = !!editingUserId;
+
+    if (!username || !email) {
+      setError('Username and email are required');
       return;
+    }
+
+    if (!isEditing) {
+      if (!password) {
+        setError('Password is required');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+    } else if (changePassword) {
+      if (!oldPassword) {
+        setError('Old password is required');
+        return;
+      }
+      if (!password) {
+        setError('New password is required');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
     }
 
     try {
       setLoading(true);
-      const body = editingUserId
-        ? { id: editingUserId, username, email, password }
-        : { username, email, password };
-
-      if (editingUserId) {
-        await api.put(`/api/users/${editingUserId}`, body);
+      if (isEditing) {
+        const pw = changePassword ? password : originalPassword;
+        await api.put(`/api/users/${editingUserId}`, { id: editingUserId, username, email, password: pw });
       } else {
-        await api.post('/api/users', body);
+        await api.post('/api/users', { username, email, password });
       }
-
       resetUserForm();
       loadUsers();
     } catch (err) {
@@ -61,7 +87,11 @@ export default function UsersView() {
   const handleUserEdit = (user: User) => {
     setUsername(user.username);
     setEmail(user.email);
-    setPassword(user.password);
+    setOriginalPassword(user.password);
+    setOldPassword('');
+    setPassword('');
+    setConfirmPassword('');
+    setChangePassword(false);
     setEditingUserId(user.id);
     setIsUserModalOpen(true);
     setError('');
@@ -83,7 +113,11 @@ export default function UsersView() {
   const resetUserForm = () => {
     setUsername('');
     setEmail('');
+    setOldPassword('');
     setPassword('');
+    setConfirmPassword('');
+    setChangePassword(false);
+    setOriginalPassword('');
     setEditingUserId(null);
     setIsUserModalOpen(false);
     setError('');
@@ -110,13 +144,19 @@ export default function UsersView() {
         user={editingUserId ? users.find(u => u.id === editingUserId) || null : null}
         username={username}
         email={email}
+        oldPassword={oldPassword}
         password={password}
+        confirmPassword={confirmPassword}
+        changePassword={changePassword}
         loading={loading}
         error={error}
         onSubmit={handleUserSubmit}
         onUsernameChange={setUsername}
         onEmailChange={setEmail}
+        onOldPasswordChange={setOldPassword}
         onPasswordChange={setPassword}
+        onConfirmPasswordChange={setConfirmPassword}
+        onChangePasswordToggle={setChangePassword}
         onClose={resetUserForm}
       />
 
