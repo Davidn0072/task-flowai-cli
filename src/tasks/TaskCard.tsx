@@ -159,7 +159,9 @@ export default function TaskCard({
                             Edit
                           </button>
                           <button
-                            onClick={() => onDeleteSubItem(subItem.id)}
+                            onClick={() => {
+                              if (window.confirm(`Delete subtask "${subItem.title}"?`)) onDeleteSubItem(subItem.id);
+                            }}
                             disabled={loading}
                             className="text-red-500 hover:text-red-700 text-xs"
                           >
@@ -212,7 +214,9 @@ export default function TaskCard({
           {generatingSubtasksFor === task.id ? 'Generating...' : '✨ AI Subtasks'}
         </button>
         <button
-          onClick={() => onDelete(task.id)}
+          onClick={() => {
+            if (window.confirm(`Are you sure you want to delete task "${task.title}"? This action cannot be undone.`)) onDelete(task.id);
+          }}
           disabled={loading}
           className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:bg-gray-400"
         >

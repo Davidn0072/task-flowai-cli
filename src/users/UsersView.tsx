@@ -105,6 +105,8 @@ export default function UsersView() {
   };
 
   const handleUserDelete = async (id: number) => {
+    const user = users.find(u => u.id === id);
+    if (!window.confirm(`Are you sure you want to delete user "${user?.username}"? This action cannot be undone.`)) return;
     try {
       setLoading(true);
       await api.delete(`/api/users/${id}`);
