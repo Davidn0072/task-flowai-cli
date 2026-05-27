@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import UserFormModal from './UserFormModal';
-import { api } from './api';
-import type { User } from './types';
+import { api } from '../shared/api';
+import type { User } from '../shared/types';
 
 export default function UsersView() {
   const [users, setUsers] = useState<User[]>([]);

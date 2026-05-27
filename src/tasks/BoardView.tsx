@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import TaskCard from './TaskCard';
 import TaskFormModal from './TaskFormModal';
 import { useTasks } from './useTasks';
-import { api } from './api';
-import type { TaskItem, SearchFilter } from './types';
+import { api } from '../shared/api';
+import type { TaskItem, SearchFilter } from '../shared/types';
 
 const COLUMNS: { status: string; label: string; color: string }[] = [
   { status: 'Todo',       label: 'To Do',       color: 'bg-gray-200 text-gray-700'   },

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
-import Login from './Login';
-import Register from './Register';
-import Sidebar from './Sidebar';
-import TasksView from './TasksView';
-import BoardView from './BoardView';
-import UsersView from './UsersView';
+import Login from './auth/Login';
+import Register from './auth/Register';
+import Sidebar from './layout/Sidebar';
+import TasksView from './tasks/TasksView';
+import BoardView from './tasks/BoardView';
+import UsersView from './users/UsersView';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);

@@ -1,4 +1,4 @@
-import type { TaskItem, TaskSubItem } from './types';
+import type { TaskItem, TaskSubItem } from '../shared/types';
 
 const AVATAR_COLORS = [
   'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500',

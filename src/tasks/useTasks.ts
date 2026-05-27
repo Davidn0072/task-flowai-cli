@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { api } from './api';
-import type { User, TaskSubItem, TaskItem } from './types';
+import { api } from '../shared/api';
+import type { User, TaskSubItem, TaskItem } from '../shared/types';
 
 export function useTasks() {
   const [users, setUsers] = useState<User[]>([]);
