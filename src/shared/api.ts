@@ -52,7 +52,22 @@ export const apiCall = async <T = any>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(errorData.message || `HTTP Error: ${response.status}`);
+    let message: string;
+    if (typeof errorData === 'string') {
+      message = errorData;
+    } else if (Array.isArray(errorData)) {
+      message = errorData.join(', ');
+    } else if (errorData.message) {
+      message = errorData.message;
+    } else if (errorData.errors) {
+      // ASP.NET Core validation problem details: { errors: { field: ["msg"] } }
+      message = Object.values(errorData.errors as Record<string, string[]>).flat().join(', ');
+    } else if (errorData.title) {
+      message = errorData.title;
+    } else {
+      message = `HTTP Error: ${response.status}`;
+    }
+    throw new Error(message);
   }
 
   // PUT/DELETE often return 204 No Content with an empty body

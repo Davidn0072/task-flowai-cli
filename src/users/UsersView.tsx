@@ -71,9 +71,16 @@ export default function UsersView() {
       setLoading(true);
       if (isEditing) {
         const pw = changePassword ? password : originalPassword;
-        await api.put(`/api/users/${editingUserId}`, { id: editingUserId, username, email, password: pw });
+        await api.put(`/api/users/${editingUserId}`, {
+          user: { id: editingUserId, username, email, password: pw },
+          oldPassword: changePassword ? oldPassword : originalPassword,
+          confirmPassword: changePassword ? confirmPassword : pw,
+        });
       } else {
-        await api.post('/api/users', { username, email, password });
+        await api.post('/api/users', {
+          user: { id: 0, username, email, password },
+          confirmPassword,
+        });
       }
       resetUserForm();
       loadUsers();

@@ -53,7 +53,10 @@ export default function Register({ onRegisterSuccess, onSwitchToLogin }: Registe
 
     try {
       setLoading(true);
-      await api.post('/api/users', { username, email, password });
+      await api.post('/api/users', {
+        user: { id: 0, username, email, password },
+        confirmPassword,
+      });
       onRegisterSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
